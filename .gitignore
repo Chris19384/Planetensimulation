@@ -29,6 +29,8 @@ dump.rdb
 cy*.so
 cy*.c
 */native/build/
+native/build/*
+native/build/
 
 # misc
 secrets.properties
