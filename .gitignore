@@ -1,0 +1,34 @@
+.idea/inspectionProfiles
+.idea/misc.xml
+.idea/modules.xml
+.idea/pi.iml
+.idea/vcs.xml
+.idea/workspace.xml
+.idea
+
+.idea/*
+
+.ipynb_checkpoints/*
+.ipynb_checkpoints
+
+__pycache__/
+
+.spyproject/*
+
+.spyproject
+.spyproject/codestyle.ini
+.spyproject/encoding.ini
+.spyproject/vcs.ini
+.spyproject/workspace.ini
+
+
+# redis
+dump.rdb
+
+# cython
+cy*.so
+cy*.c
+*/native/build/
+
+# misc
+secrets.properties

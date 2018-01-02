@@ -1,0 +1,90 @@
+#!/bin/bash
+
+# this is a script to quickly deploy nodes in our distributed system
+# type
+#  $ ./clgo
+# to find out how to use this script
+# look at sample.properties for your secrets.properties 
+
+
+
+
+###
+# Setup (mostly .properties file)
+###
+
+# which file to read the properties from
+PROPFILE=secrets.properties
+
+# check for propsfile being present
+if [[ $(cat ${PROPFILE} 2> /dev/null) == '' ]] ; then
+	echo " <> No properties file '$PROPFILE' found..., aborting"
+	exit
+fi
+
+# function stolen from here:
+#  https://stackoverflow.com/questions/28830225/how-to-read-a-properties-file-which-contains-keys-that-have-a-period-character
+function prop {
+    grep "${1}" ${PROPFILE}|cut -d'=' -f2
+}
+
+function usage {
+	echo " <> Please specify a subdomain of '$DOMAIN' to connect to!"
+	echo " <> Usage: $0 <subdomain> <manager|redis|work|_>" 
+	echo "" 
+	echo " [Make sure you have sshpass installed]" 
+	exit
+}
+
+# get all necessary properties
+DOMAIN=$(prop 'domain') 
+USERNAME=$(prop 'username')
+PASSWORD=$(prop 'password')
+PROJPATH=$(prop 'projpath')
+CMDMANAGER=$(prop 'cmdmanager')
+CMDREDIS=$(prop 'cmdredis')
+CMDWORKER=$(prop 'cmdworker')
+CMDEXTRA=$(prop 'cmdextra')
+SUBDOMAIN=$1
+
+# craft final domain
+if [[ $SUBDOMAIN == '' ]] ; then
+	COMPLDOMAIN=${DOMAIN}
+else
+	COMPLDOMAIN=${SUBDOMAIN}.${DOMAIN}
+fi
+echo " <> Props set."
+
+
+
+
+###
+# ssh invocation
+###
+
+if [[ $2 == 'manager' ]] ; then
+	echo " <> starting __manager__ on host ${COMPLDOMAIN}..."
+	sshpass -f ${PASSWORD} ssh ${USERNAME}@${COMPLDOMAIN} -t \
+		"${CMDEXTRA}; cd ${PROJPATH}; make clmanager; bash"
+
+elif [[ $2 == 'redis' ]] ; then 
+	echo " <> starting __redis__ on host ${COMPLDOMAIN}..."
+	sshpass -f ${PASSWORD} ssh ${USERNAME}@${COMPLDOMAIN} -t \
+		"${CMDEXTRA}; cd ${PROJPATH}; make redis; bash"
+
+elif [[ $2 == 'work' ]] ; then
+	echo " <> starting __worker__ on host ${COMPLDOMAIN}..."
+	sshpass -f ${PASSWORD} ssh ${USERNAME}@${COMPLDOMAIN} -t \
+		"${CMDEXTRA}; cd ${PROJPATH}; make clworker; bash"
+
+
+else
+	echo " <> starting generic __ssh__ on host ${COMPLDOMAIN}..."
+	if [[ ${SUBDOMAIN} == 'abacus' ]] ; then
+		DOMAIN=hs-augsburg
+	fi
+	sshpass -f ${PASSWORD} ssh ${USERNAME}@${COMPLDOMAIN} -t \
+		"bash"
+fi
+
+

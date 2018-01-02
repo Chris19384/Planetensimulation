@@ -1,0 +1,134 @@
+{
+    "profile": false,
+    "profile_file": "/tmp/galaxy_profile.cprof",
+    "load_planets_file": "planets.msgpack",
+    "render_fps": 240,
+    "sim_fps": 60,
+    "fps_min": 1.0,
+    "fps_max": 600.0,
+    "delta_t": 27373870,
+    "delta_t_min": 1000.0,
+    "delta_t_max": 50000000.0,
+    "mode_stuff": {
+        "mode": 0,
+        "modes": [
+            "last planet data",
+            "random",
+            "real"
+        ]
+    },
+    "update_impl": "cyworker_parallel",
+    "update_impl_fallback": "cyworker_np",
+    "update_impls": [
+        "cyworker",
+        "cyworker_np",
+        "cyworker_optimized",
+        "cyworker_parallel"
+    ],
+    "cluster": {
+        "active": true,
+        "manager_host": "localhost",
+        "manager_port": 33333,
+        "manager_secret": "secret",
+        "redis_host": "localhost",
+        "redis_port": 6379,
+        "redis_secret": "NotEvenSecureRedis",
+        "chunks": 2,
+        "chunks_min": 1,
+        "chunks_max": 75,
+        "suggested_hosts": [
+            "localhost",
+            "abacus.informatik.hs-augsburg.de",
+            "victor.informatik.fh-augsburg.de",
+            "whiskey.informatik.fh-augsburg.de",
+            "xray.informatik.fh-augsburg.de"
+        ],
+        "suggested_ports": [
+            "33333",
+            "6379"
+        ],
+        "host": "abacus.informatik.hs-augsburg.de",
+        "port": 33333
+    },
+    "print_every": 35.0,
+    "central_mass": 0.0,
+    "central_radius": 0.0,
+    "universe_size": 0.0,
+    "nr_planets": 1207,
+    "mass_min": 5e+20,
+    "mass_max": 5e+23,
+    "radius_min": 58000000000.0,
+    "radius_max": 4495000000000.0,
+    "dist_to_sun_min": 58000000000.0,
+    "dist_to_sun_max": 4495000000000.0,
+    "scale_factor_world": {
+        "0": 16495000000000.0,
+        "1": 16495000000000.0,
+        "2": 16495000000000.0
+    },
+    "scale_factor_planet": {
+        "0": 3.4226063147086505e-15,
+        "1": 3.4226063147086505e-15,
+        "2": 2.224694104560623e-10
+    },
+    "b_hole_default_mass": 1.99e+30,
+    "b_hole_default_radius": 7000000.0,
+    "planets": [
+        "Sonne",
+        "Merkur",
+        "Venus",
+        "Erde",
+        "Mars",
+        "Jupiter",
+        "Saturn",
+        "Uranus",
+        "Neptun"
+    ],
+    "planets_data": {
+        "Sonne": {
+            "mass": 1.99e+30,
+            "radius": 7000000.0,
+            "distanceToSun": 0
+        },
+        "Merkur": {
+            "mass": 3.3e+23,
+            "radius": 2439764.0,
+            "distanceToSun": 58000000000.0
+        },
+        "Venus": {
+            "mass": 4.87e+24,
+            "radius": 6051590.0,
+            "distanceToSun": 108000000000.0
+        },
+        "Erde": {
+            "mass": 5.97e+24,
+            "radius": 6378150.0,
+            "distanceToSun": 150000000000.0
+        },
+        "Mars": {
+            "mass": 6.42e+23,
+            "radius": 3397000.0,
+            "distanceToSun": 228000000000.0
+        },
+        "Jupiter": {
+            "mass": 1.9e+27,
+            "radius": 71492680.0,
+            "distanceToSun": 778000000000.0
+        },
+        "Saturn": {
+            "mass": 5.69e+26,
+            "radius": 60267140.0,
+            "distanceToSun": 1433000000000.0
+        },
+        "Uranus": {
+            "mass": 8.68e+25,
+            "radius": 25559000.0,
+            "distanceToSun": 2872000000000.0
+        },
+        "Neptun": {
+            "mass": 1.02e+26,
+            "radius": 24764000.0,
+            "distanceToSun": 4495000000000.0
+        }
+    }
+}
