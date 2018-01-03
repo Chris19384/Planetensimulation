@@ -1,0 +1,13 @@
+FROM archlinux/base
+
+# copy repo over
+ADD Planetensimulation /root/Planetensimulation
+
+# update and install packages
+RUN pacman -Syu --noconfirm make python python-numpy
+
+# Make worker impls
+CMD cd /root/Planetensimulation
+
+# launch worker, Go!
+# CMD make clworker
