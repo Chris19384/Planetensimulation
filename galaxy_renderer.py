@@ -25,8 +25,9 @@ try:
     from OpenGL import GLUT
     from OpenGL import GL
     from OpenGL import GLU
-except ImportError:
+except ImportError as e:
     print(' Error: Software not installed properly !!')
+    print('OpenGL Error:', e)
     sys.exit()
 from math import floor
 
@@ -46,6 +47,7 @@ _WINDOW_SIZE = (512, 512)
 _WINDOW_POSITION = (100, 100)
 _LIGHT_POSITION = (2, 2, 3)
 _CAMERA_POSITION = (0, 0, 2)
+
 
 class GalaxyRenderer:
     """
@@ -132,9 +134,7 @@ class GalaxyRenderer:
                         -_CAMERA_POSITION[1],
                         -_CAMERA_POSITION[2])
         self.mouse_interactor.apply_transformation()
-        #for body_index in range(self.bodies.shape[0]):
         for body_index in range(len(self.bodies)):
-            #body = self.bodies[body_index, :]
             body = self.bodies[body_index]
             GL.glPushMatrix()
             GL.glTranslatef(body[0], body[1], body[2])
@@ -142,8 +142,6 @@ class GalaxyRenderer:
             GL.glCallList(self.sphere)
             GL.glPopMatrix()
         GLUT.glutSwapBuffers()
-
-
 
     @staticmethod
     def start():
@@ -166,7 +164,7 @@ class GalaxyRenderer:
             unpacked = umsgpack.unpackb(pipe_input)
             if isinstance(unpacked, str) and unpacked == END_MESSAGE:
                 self.do_exit = True
-            #elif isinstance(pipe_input, dict):
+            # elif isinstance(pipe_input, dict):
             #    pass
             else:
                 if not self.skip_one:
@@ -186,8 +184,10 @@ class GalaxyRenderer:
                 log(f" - CANNOT HOLD FPS - ")
                 log(f"{t}ms / {self.max_step_ms}ms")
 
+
 def _time_ms():
     return int(floor(time.time() * 1000))
+
 
 def startup(render_pipe, fps):
     """

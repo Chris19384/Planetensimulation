@@ -16,8 +16,6 @@ MODE = 'cluster' # or '<worker_implementation>'
 
 def main():
 
-
-
     # load config
     # make sure to configure it before using
     config = Config(filename="save.cfg.json")

@@ -1,5 +1,4 @@
 import numpy as np
-import zlib
 
 from . import redis
 from .planet_helper import serialize_np, deserialize_np
@@ -31,35 +30,35 @@ class RedisWrapper():
                        accels: np.ndarray,
                        masses: np.ndarray,
                        n):
-        self.r.set('pos', zlib.compress(serialize_np(pos)))
-        self.r.set('speeds', zlib.compress(serialize_np(speeds)))
-        self.r.set('accels', zlib.compress(serialize_np(accels)))
-        self.r.set('masses', zlib.compress(serialize_np(masses)))
+        self.r.set('pos', (serialize_np(pos)))
+        self.r.set('speeds', (serialize_np(speeds)))
+        self.r.set('accels', (serialize_np(accels)))
+        self.r.set('masses', (serialize_np(masses)))
         self.r.set('n', n)
 
     def send_planets_wo_masses(self, pos: np.ndarray,
                        speeds: np.ndarray,
                        accels: np.ndarray,
                        n):
-        self.r.set('pos', zlib.compress(serialize_np(pos)))
-        self.r.set('speeds', zlib.compress(serialize_np(speeds)))
-        self.r.set('accels', zlib.compress(serialize_np(accels)))
+        self.r.set('pos', (serialize_np(pos)))
+        self.r.set('speeds', (serialize_np(speeds)))
+        self.r.set('accels', (serialize_np(accels)))
         self.r.set('n', n)
 
 
     def receive_planets(self):
-        pos = deserialize_np(zlib.decompress(self.r.get('pos')))
-        speeds = deserialize_np(zlib.decompress(self.r.get('speeds')))
-        accels = deserialize_np(zlib.decompress(self.r.get('accels')))
-        masses = deserialize_np(zlib.decompress(self.r.get('masses')))
+        pos = deserialize_np((self.r.get('pos')))
+        speeds = deserialize_np((self.r.get('speeds')))
+        accels = deserialize_np((self.r.get('accels')))
+        masses = deserialize_np((self.r.get('masses')))
         n = int(self.r.get('n'))
         return pos, speeds, accels, masses, n
 
     def get_np(self, key):
-        return deserialize_np(zlib.decompress(self.r.get(key)))
+        return deserialize_np((self.r.get(key)))
 
     def set_np(self, key, val):
-        return self.r.set(key, zlib.compress(serialize_np(val)))
+        return self.r.set(key, (serialize_np(val)))
 
     def delete(self, key):
         self.r.delete(key)

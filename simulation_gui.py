@@ -41,6 +41,7 @@ DEBUG_GUI = False
 
 __log = get_log_func("[gui]")
 
+
 def log(*tpl):
     if DEBUG_GUI:
         __log(*tpl)
@@ -54,7 +55,9 @@ class SimulationGUI(QtWidgets.QWidget):
         QtWidgets.QWidget.__init__(self)
 
         self.ui = uic.loadUi('userinterface.ui')
-        self.config = Config(CONFIG_FILE) # pylint:disable=no-member
+
+        # pylint:disable=no-member
+        self.config = Config(CONFIG_FILE)
 
         # modes combobox
         for i, mode in enumerate(self.config.mode_stuff["modes"]):

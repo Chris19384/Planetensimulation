@@ -14,7 +14,20 @@ DEBUG = False
 
 
 class Config:
-    """-"""
+    """
+    Wrapper for a config file.
+    Loads values from default config file.
+    Access via point operator:
+    >>> c: Config = Config("save.cfg.json")
+    >>> c.delta_t_max
+    50000000.0
+
+    Values can also be set using the same operator
+    >>> c.delta_t_max = 200.0
+
+    Save the config to the file with the filename provided in the constructor
+    >>> #c.save()
+    """
 
     def __init__(self, filename, filename_default='default.cfg.json'):
         """
@@ -82,13 +95,8 @@ class Config:
 
 
 def main():
-    c = Config("save.cfg.json")
-    if DEBUG:
-        log("Before load():", c.__dict__["mass_min"])
-    c.save()
-    c.load()
-    if DEBUG:
-        log("After load():", c.__dict__["mass_min"])
+    import doctest
+    doctest.testmod()
 
 
 if __name__ == '__main__':

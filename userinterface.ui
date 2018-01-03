@@ -327,7 +327,7 @@
          </sizepolicy>
         </property>
         <property name="text">
-         <string>delta_t Zeitschritt:</string>
+         <string>delta_t Step (secs):</string>
         </property>
         <property name="alignment">
          <set>Qt::AlignCenter</set>

@@ -8,7 +8,7 @@ def valueMap(x, in_min, in_max, out_min, out_max):
 def get_log_func(tag):
     return lambda *stuff: print(tag, *stuff)
 
-def time_ms():
+def time_ms() -> int:
     return int(math.floor(time.time() * 1000))
 
 def chunk_indices(how_many, chunks):

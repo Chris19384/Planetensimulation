@@ -4,14 +4,18 @@ from sys import argv, exit
 from native.cyworker import update_planet_indices
 from lib.redis_wrapper import RedisWrapper
 from lib.helper import time_ms, get_log_func
+from config import Config
 
-
-REDIS_PW = "NotEvenSecureRedis"
 
 
 # RedisWrapper instance
 rds: RedisWrapper = None
 log = get_log_func("[worker]")
+
+# config
+config: Config = Config("save.cfg.json")
+REDIS_PW = config.cluster["redis_secret"]
+MANAGER_PW = config.cluster["manager_secret"]
 
 
 
@@ -84,7 +88,7 @@ if __name__ == '__main__':
     # manager
     TaskManager.register('get_job_queue')
     TaskManager.register('get_result_queue')
-    m = TaskManager(address=(manager_host, manager_port), authkey = b'secret')
+    m = TaskManager(address=(manager_host, manager_port), authkey = bytes(MANAGER_PW, encoding="ascii"))
     while 1:
         try:
             m.connect()

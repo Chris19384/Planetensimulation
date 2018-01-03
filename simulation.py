@@ -46,8 +46,6 @@ from simulation_constants import END_MESSAGE
 from distributed_queue import TaskManager
 
 
-
-
 log = get_log_func("[simu]")
 worker = None
 
@@ -66,7 +64,6 @@ rds: RedisWrapper = None
 masses_pushed = False
 
 
-
 _TYPE = np.float64
 random_directions = [
     np.array([1, 0, 1], dtype=_TYPE),
@@ -75,21 +72,17 @@ random_directions = [
 ]
 
 
-
-
 def _initialise_planets(nr_of_planets: int):
     """
 
     :param nr_of_planets:
-    :param mode: string, for now either "random" or "real"
-    :return: a tuple of newly created planets
+    :return: a planets object containing the specified amount of planets
     """
 
     # get mode from config
     mode = config.mode_stuff["modes"][config.mode_stuff["mode"]]
 
     # load up planets from file if needed
-    # TODO rewrite
     if mode == "last planet data":
         pl, mode, success = load_planets(config.load_planets_file)
         if not success:
@@ -103,7 +96,6 @@ def _initialise_planets(nr_of_planets: int):
         config.mode = mode
 
         return pl
-
 
     # randomly generate planets
     elif mode == "random":
@@ -126,12 +118,12 @@ def _initialise_planets(nr_of_planets: int):
             # loop for planets not to spawn to close to the sun
             pos = np.array((0, 0, 0), dtype=np.float64)
             while np.linalg.norm(pos) < 0.01:
-                rndX = random.uniform(-1, 1)
-                rndY = random.uniform(-1, 1)
-                rndZ = random.uniform(-1, 1)
-                pos = np.array((rndX, rndY, rndZ), dtype=np.float64)
-                rndScale = random.uniform(config.dist_to_sun_min, config.dist_to_sun_max)
-                pos *= rndScale
+                rnd_x = random.uniform(-1, 1)
+                rnd_y = random.uniform(-1, 1)
+                rnd_z = random.uniform(-1, 1)
+                pos = np.array((rnd_x, rnd_y, rnd_z), dtype=np.float64)
+                rnd_scale = random.uniform(config.dist_to_sun_min, config.dist_to_sun_max)
+                pos *= rnd_scale
 
             # gen random mass
             mass = random.uniform(config.mass_min, config.mass_max)
@@ -147,11 +139,10 @@ def _initialise_planets(nr_of_planets: int):
         for i in range(1, nr_of_planets + 1):
 
             # calculate point mass and point mass position for that planet
-            M, r_s_l = calc_point_mass_for_planet(i, planets)
-            planets.speeds[i] = calc_initial_speed(planets.pos[i], planets.masses[i], M, r_s_l)
+            point_mass, r_s_l = calc_point_mass_for_planet(i, planets)
+            planets.speeds[i] = calc_initial_speed(planets.pos[i], planets.masses[i], point_mass, r_s_l)
 
         return planets
-
 
     # or emulate the real sunsystem
     elif mode == "real":
@@ -189,16 +180,17 @@ def _initialise_planets(nr_of_planets: int):
         for i in range(1, planets.n):
 
             # calculate point mass and point mass position for that planet
-            M, r_s_l = calc_point_mass_for_planet(i, planets)
+            point_mass, r_s_l = calc_point_mass_for_planet(i, planets)
 
             # set speed
-            planets.speeds[i] = calc_initial_speed(planets.pos[i], planets.masses[i], M, r_s_l)
+            planets.speeds[i] = calc_initial_speed(planets.pos[i], planets.masses[i], point_mass, r_s_l)
 
         return planets
 
     # no mode that is supported
     else:
         raise AssertionError(f"mode {mode} is not supported!")
+
 
 def connect_to_manager(config):
     global tm, rds, job_queue, result_queue
@@ -226,6 +218,7 @@ def connect_to_manager(config):
         log("Exception while connecting to Manager:", e)
         exit(1)
         return False
+
 
 def calculate_manager(planets, new_planets, delta_t):
     global tm, rds, job_queue, result_queue, config, chunks, masses_pushed
@@ -268,12 +261,11 @@ def calculate_manager(planets, new_planets, delta_t):
         result_queue.get()
     t_join = time_ms() - t_join_start
 
-
     if DEBUG_CLUSTER_RESULT:
         sqsum = 0
 
-
-    # TODO document what I am doing here...
+    # merge all results from redis
+    # back into our data
     t_start_redis_apply = time_ms()
     t_queue = 0
     t_merge_all = 0
@@ -283,15 +275,13 @@ def calculate_manager(planets, new_planets, delta_t):
         ifrom = tpl[0]
         ito = tpl[1]
 
-        t_queue_get = time_ms()
+        t_queue_get: int = time_ms()
 
         # new: get all redis stuff in
         key_pos = str(ifrom) + str(ito) + 'pos'
         key_speeds = str(ifrom) + str(ito) + 'speeds'
         key_accels = str(ifrom) + str(ito) + 'accels'
-        r_pos, r_speeds, r_accels = rds.get_np(key_pos), \
-                                    rds.get_np(key_speeds), \
-                                    rds.get_np(key_accels)
+        r_pos, r_speeds, r_accels = rds.get_np(key_pos), rds.get_np(key_speeds), rds.get_np(key_accels)
         # del redis
         rds.delete(key_pos)
         rds.delete(key_speeds)
@@ -309,10 +299,8 @@ def calculate_manager(planets, new_planets, delta_t):
 
     t_redis_apply = time_ms() - t_start_redis_apply
 
-
     if DEBUG_CLUSTER_RESULT:
         log(f"cluster apply sum {sqsum}")
-
 
     # measure performance
     if DEBUG_CLUSTER_TIMES:
@@ -327,27 +315,23 @@ def calculate_manager(planets, new_planets, delta_t):
         log()
 
 
-
-def startup(sim_pipe, simConfig: Config):
+def startup(sim_pipe, sim_config: Config):
     """
     Initialise and continuously update a position list.
 
     Results are sent through a pipe after each update step
     :param sim_pipe:
-    :param simConfig:
+    :param sim_config:
     :return:
     """
 
-    global __FPS
     global config
-    global max_step_ms
-    global paused
     global worker
     global chunks
 
     # assign config
-    config = simConfig
-    assert (config)
+    config = sim_config
+    assert config
 
     cluster = config.cluster["active"]
     chunks = config.cluster["chunks"]
@@ -367,7 +351,7 @@ def startup(sim_pipe, simConfig: Config):
             worker = import_module("native." + config.update_impl)
             log("  OK:")
             log(f"      update implementation {config.update_impl} loaded")
-        except Exception as e:
+        except Exception:
             log(" !-_Error_-! importing update implementation", config.update_impl)
             log(f"     Falling back to fallback impl {config.update_impl_fallback}")
             worker = import_module("native.worker_01")
@@ -377,12 +361,12 @@ def startup(sim_pipe, simConfig: Config):
     paused = False
 
     # cache vars
-    delta_t = simConfig.delta_t
-    print_every = simConfig.print_every
+    delta_t = sim_config.delta_t
+    print_every = sim_config.print_every
 
     # time that one simulation step should take
     # in ms
-    max_step_ms = 1000 / simConfig.sim_fps
+    max_step_ms = 1000 / sim_config.sim_fps
 
     # load planets
     planets: Planets = _initialise_planets(int(config.nr_planets))
@@ -432,20 +416,11 @@ def startup(sim_pipe, simConfig: Config):
             # perform step (in-memory)
             t_worker_start = time_ms()
             if not cluster:
-                worker.move_planets(planets.pos,
-                                     planets.speeds,
-                                     planets.accels,
-                                     planets.masses,
-                                     new_planets.pos,
-                                     new_planets.speeds,
-                                     new_planets.accels,
-                                     planets.n,
-                                     delta_t
-                                     )
+                worker.move_planets(planets.pos, planets.speeds, planets.accels, planets.masses, new_planets.pos,
+                                    new_planets.speeds, new_planets.accels, planets.n, delta_t)
             else:
                 calculate_manager(planets, new_planets, delta_t)
             t_worker = time_ms() - t_worker_start
-
 
             # convert to a renderable format and send to the receiver
             # send to receiver process
@@ -489,16 +464,15 @@ def startup(sim_pipe, simConfig: Config):
 
 
 
-def startup_profile(sim_pipe, simConfig: Config):
+def startup_profile(sim_pipe, sim_config: Config):
     pr = cProfile.Profile()
     pr.enable()
 
-    startup(sim_pipe, simConfig)
+    startup(sim_pipe, sim_config)
 
     pr.disable()
     s = io.StringIO
     sortby = 'cumulative'
     stats = pstats.Stats(pr, stream=s).sort_stats(sortby)
-    stats.dump_stats(simConfig.profile_file)
-
-    # cProfile.runctx('startup(sim_pipe, simConfig)', globals(), locals(), filename=None)
+    stats.dump_stats(sim_config.profile_file)
+    # cProfile.runctx('startup(sim_pipe, sim_config)', globals(), locals(), filename=None)
