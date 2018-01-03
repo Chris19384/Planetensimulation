@@ -5,7 +5,7 @@ from sys import argv, exit
 from config import Config
 
 
-config: Config = Config("save.cfg.json")
+config = Config("save.cfg.json")
 SECRET = config.cluster["manager_secret"]
 
 

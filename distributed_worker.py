@@ -1,5 +1,6 @@
 from distributed_queue import TaskManager
 from sys import argv, exit
+import socket
 
 from native.cyworker import update_planet_indices
 from lib.redis_wrapper import RedisWrapper
@@ -9,11 +10,11 @@ from config import Config
 
 
 # RedisWrapper instance
-rds: RedisWrapper = None
-log = get_log_func("[worker]")
+rds = None
+log = get_log_func(" [worker]")
 
 # config
-config: Config = Config("save.cfg.json")
+config = Config("save.cfg.json")
 REDIS_PW = config.cluster["redis_secret"]
 MANAGER_PW = config.cluster["manager_secret"]
 
@@ -61,10 +62,10 @@ def __worker_function(job_queue, result_queue):
 
 
         # timing information
-        log(f"Job from {ifrom:5d} to {ito:5d}")
-        log(f"  t_get : {t_get}ms")
-        log(f"  t_dict: {t_dict}ms")
-        log(f"  t_calc: {t_calc}ms")
+        log("Job from {:5d} to {:5d}".format(ifrom, ito))
+        log("  t_get : {}ms".format(t_get))
+        log("  t_dict: {}ms".format(t_dict))
+        log("  t_calc: {}ms".format(t_calc))
         log()
 
 def __start_worker(m):
@@ -82,6 +83,19 @@ if __name__ == '__main__':
     redis_host   = argv[3]
     redis_port   = int(argv[4])
 
+
+    log("Manager: {}:{}".format(manager_host, manager_port))
+    log("Redis: {}:{}".format(redis_host, redis_port))
+
+    # resolve hostnames
+    try:
+        manager_host = socket.gethostbyname(manager_host)
+        redis_host = socket.gethostbyname(redis_host)
+    except Exception as e:
+        log("Something went wrong while resolving hosts:")
+        log(e)
+        exit(1)
+
     # redis
     rds = RedisWrapper(redis_host, redis_port, REDIS_PW)
 
@@ -89,13 +103,13 @@ if __name__ == '__main__':
     TaskManager.register('get_job_queue')
     TaskManager.register('get_result_queue')
     m = TaskManager(address=(manager_host, manager_port), authkey = bytes(MANAGER_PW, encoding="ascii"))
-    while 1:
-        try:
-            m.connect()
-            break
-        except:
-            log("reconnecting...")
+    try:
+        m.connect()
+    except Exception as e:
+        log("Exception while connecting to manager:")
+        log(e)
+        exit(1)
     log()
-    log(f"connected to manager at {manager_host}:{manager_port}")
+    log('connected to manager at {}:{}'.format(manager_host, manager_port))
     log()
     __start_worker(m)
