@@ -50,6 +50,14 @@
         "host": "abacus.informatik.hs-augsburg.de",
         "port": 33333
     },
+    "debug": {
+        "cluster_times": false,
+        "cluster_result": false,
+        "momentum": false,
+        "planets": false,
+        "sim_fps": false,
+        "render_fps": false
+    },
     "print_every": 35.0,
     "central_mass": 0.0,
     "central_radius": 0.0,

@@ -21,23 +21,50 @@ MANAGER_PW = config.cluster["manager_secret"]
 
 
 
-def __worker_function(job_queue, result_queue):
+def __worker_function(job_queue):
+
+    run_id_prev = -1
+    pos = None
+    speeds = None
+    accels = None
+    masses = None
+    n = None
+    masses_and_n_set = False
 
     # work forever
     while 1:
 
         # pull a task from the queue (blocking call)
-        t_start_get = time_ms()
+        t_start_queue = time_ms()
         task = job_queue.get()
-        ifrom, ito, delta_t = task
-        t_get = time_ms() - t_start_get
+        ifrom, ito, delta_t, run_id = task
+        # special job: clear
+        if ifrom < 0:
+            pos = None
+            speeds = None
+            accels = None
+            masses = None
+            masses_and_n_set = False
+            n = None
+            run_id_prev = -1
+            job_queue.task_done()
+            log(" <!> data cleared.")
+            continue
+        t_queue = time_ms() - t_start_queue
 
 
         # get planet data from redis server
-        t_start_dict = time_ms()
-        pos, speeds, accels, masses, n = rds.receive_planets()
-        t_dict = time_ms() - t_start_dict
-
+        # if run_id has changed
+        if run_id != run_id_prev or run_id == 0:
+            t_start_redis = time_ms()
+            if masses_and_n_set:
+                pos, speeds, accels = rds.receive_planets_wo_masses()
+            else:
+                pos, speeds, accels, masses, n = rds.receive_planets()
+                masses_and_n_set = True
+            t_redis = time_ms() - t_start_redis
+        else:
+            t_redis = 0
 
         # result should contain a tuple of numpy arrays:
         #  (r_pos, r_speeds, r_accels, ifrom, ito)
@@ -53,24 +80,24 @@ def __worker_function(job_queue, result_queue):
         rds.set_np(str(ifrom) + str(ito) + "pos", result[0])
         rds.set_np(str(ifrom) + str(ito) + "speeds", result[1])
         rds.set_np(str(ifrom) + str(ito) + "accels", result[2])
-        result_queue.put(1)
-
 
         # send back a signal that this job is done
         job_queue.task_done()
         t_calc = time_ms() - t_start_calc
 
+        # update run_id_prev
+        run_id_prev = run_id
 
         # timing information
-        log("Job from {:5d} to {:5d}".format(ifrom, ito))
-        log("  t_get : {}ms".format(t_get))
-        log("  t_dict: {}ms".format(t_dict))
-        log("  t_calc: {}ms".format(t_calc))
+        log("Job [{:5d}:{:5d}], run #{}".format(ifrom, ito, run_id))
+        log("  t_queue : {}ms".format(t_queue))
+        log("  t_redis : {}ms".format(t_redis))
+        log("  t_calc  : {}ms".format(t_calc))
         log()
 
 def __start_worker(m):
-    job_queue, result_queue = m.get_job_queue(), m.get_result_queue()
-    __worker_function(job_queue, result_queue)
+    job_queue = m.get_job_queue()
+    __worker_function(job_queue)
 
 if __name__ == '__main__':
 
@@ -82,7 +109,6 @@ if __name__ == '__main__':
     manager_port = int(argv[2])
     redis_host   = argv[3]
     redis_port   = int(argv[4])
-
 
     log("Manager: {}:{}".format(manager_host, manager_port))
     log("Redis: {}:{}".format(redis_host, redis_port))
@@ -101,7 +127,6 @@ if __name__ == '__main__':
 
     # manager
     TaskManager.register('get_job_queue')
-    TaskManager.register('get_result_queue')
     m = TaskManager(address=(manager_host, manager_port), authkey = bytes(MANAGER_PW, encoding="ascii"))
     try:
         m.connect()

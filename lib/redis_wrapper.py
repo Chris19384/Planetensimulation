@@ -54,6 +54,12 @@ class RedisWrapper():
         n = int(self.r.get('n'))
         return pos, speeds, accels, masses, n
 
+    def receive_planets_wo_masses(self):
+        pos = deserialize_np((self.r.get('pos')))
+        speeds = deserialize_np((self.r.get('speeds')))
+        accels = deserialize_np((self.r.get('accels')))
+        return pos, speeds, accels
+
     def get_np(self, key):
         return deserialize_np((self.r.get(key)))
 

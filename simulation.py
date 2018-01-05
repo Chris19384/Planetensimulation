@@ -37,13 +37,12 @@ import numpy as np
 import lib.umsgpack as umsgpack
 
 # my libs
-from lib.helper import valueMap, time_ms, get_log_func, chunk_indices
+from lib.helper import valueMap, time_ms, get_log_func
 from lib.planet_helper import load_planets, save_planets, calc_impulse, calc_initial_speed, calc_point_mass_for_planet
-from lib.redis_wrapper import RedisWrapper
 from config import Config
 from planets import Planets
 from simulation_constants import END_MESSAGE
-from distributed_queue import TaskManager
+from distributed_master import DistributedMaster
 
 
 log = get_log_func("[simu]")
@@ -51,17 +50,11 @@ worker = None
 
 config = None
 
-# debug options
+# debug options (GET SET VIA CONFIG)
 DEBUG_PLANETS = False
 DEBUG_FPS = False
-DEBUG_MOMENTUM = False
-DEBUG_CLUSTER_TIMES = True
-DEBUG_CLUSTER_RESULT = False
+DEBUG_MOMENTUM = True
 
-# cluster
-tm: TaskManager = None
-rds: RedisWrapper = None
-masses_pushed = False
 
 
 _TYPE = np.float64
@@ -192,127 +185,7 @@ def _initialise_planets(nr_of_planets: int):
         raise AssertionError(f"mode {mode} is not supported!")
 
 
-def connect_to_manager(config):
-    global tm, rds, job_queue, result_queue
 
-    # setup redis
-    # TODO error handling (connection to redis failed etc)
-    try:
-        rds = RedisWrapper(config.cluster["redis_host"], config.cluster["redis_port"], config.cluster["redis_secret"])
-    except Exception as e:
-        log("Exception while connecting to Redis:", e)
-        exit(1)
-
-    # setup connection to manager
-    m_host = config.cluster["manager_host"]
-    m_port = config.cluster["manager_port"]
-    TaskManager.register('get_job_queue')
-    TaskManager.register('get_result_queue')
-    tm = TaskManager(address=(m_host, m_port), authkey=bytes(config.cluster["manager_secret"], encoding='ascii'))
-    try:
-        tm.connect()
-        job_queue = tm.get_job_queue()
-        result_queue = tm.get_result_queue()
-        return True
-    except Exception as e:
-        log("Exception while connecting to Manager:", e)
-        exit(1)
-        return False
-
-
-def calculate_manager(planets, new_planets, delta_t):
-    global tm, rds, job_queue, result_queue, config, chunks, masses_pushed
-
-    # first, clear out job_queue
-    while not job_queue.empty():
-        log()
-        log(" OLD ITEM FOUND in job_queue. deleting!")
-        log()
-        job_queue.get()
-        job_queue.task_done()
-
-    # calculate job indices for the given chunksize
-    t_start_chunk_indices = time_ms()
-    index_tuples = list(chunk_indices(planets.n, chunks))
-    t_chunk_indices = time_ms() - t_start_chunk_indices
-
-    # push planet data to redis
-    t_start_dict_update = time_ms()
-    if not masses_pushed:
-        rds.send_planets(planets.pos, planets.speeds, planets.accels, planets.masses, planets.n)
-        masses_pushed = True
-    else:
-        rds.send_planets_wo_masses(planets.pos, planets.speeds, planets.accels, planets.n)
-    t_dict_update = time_ms() - t_start_dict_update
-
-    # distribute jobs to the waiting worker(s)
-    t_start_put = time_ms()
-    for tpl in index_tuples:
-        job_queue.put((tpl[0], tpl[1], delta_t))
-    t_put = time_ms() - t_start_put
-
-    # block as long as result is not computed by all workers
-    t_join_start = time_ms()
-    job_queue.join()
-    # empty up result_queue
-    # queue should only contain a one per job:
-    #  1
-    for _ in index_tuples:
-        result_queue.get()
-    t_join = time_ms() - t_join_start
-
-    if DEBUG_CLUSTER_RESULT:
-        sqsum = 0
-
-    # merge all results from redis
-    # back into our data
-    t_start_redis_apply = time_ms()
-    t_queue = 0
-    t_merge_all = 0
-    for tpl in index_tuples:
-
-        # indices
-        ifrom = tpl[0]
-        ito = tpl[1]
-
-        t_queue_get: int = time_ms()
-
-        # new: get all redis stuff in
-        key_pos = str(ifrom) + str(ito) + 'pos'
-        key_speeds = str(ifrom) + str(ito) + 'speeds'
-        key_accels = str(ifrom) + str(ito) + 'accels'
-        r_pos, r_speeds, r_accels = rds.get_np(key_pos), rds.get_np(key_speeds), rds.get_np(key_accels)
-        # del redis
-        rds.delete(key_pos)
-        rds.delete(key_speeds)
-        rds.delete(key_accels)
-
-        # timing
-        t_queue += time_ms() - t_queue_get
-
-        # merge values in our data
-        t_start_merge = time_ms()
-        new_planets.pos[ifrom:ito][:] = r_pos[:][:]
-        new_planets.speeds[ifrom:ito][:] = r_speeds[:][:]
-        new_planets.accels[ifrom:ito][:] = r_accels[:][:]
-        t_merge_all += time_ms() - t_start_merge
-
-    t_redis_apply = time_ms() - t_start_redis_apply
-
-    if DEBUG_CLUSTER_RESULT:
-        log(f"cluster apply sum {sqsum}")
-
-    # measure performance
-    if DEBUG_CLUSTER_TIMES:
-        log()
-        log(f"    chunkup      : {t_chunk_indices}ms")
-        log(f"    u_dict       : {t_dict_update}ms")
-        log(f"    q_put        : {t_put}ms")
-        log(f"    join         : {t_join}ms")
-        log(f"    t_merge      : {t_merge_all}ms")
-        log(f"    redis_apply  : {t_redis_apply}ms")
-        log(f"      q_get      : {t_queue}ms")
-        log()
 
 
 def startup(sim_pipe, sim_config: Config):
@@ -328,23 +201,28 @@ def startup(sim_pipe, sim_config: Config):
     global config
     global worker
     global chunks
+    global DEBUG_PLANETS, DEBUG_FPS, DEBUG_MOMENTUM, DEBUG_CLUSTER_TIMES, DEBUG_CLUSTER_RESULT
 
     # assign config
     config = sim_config
     assert config
 
-    cluster = config.cluster["active"]
-    chunks = config.cluster["chunks"]
+    # set all debug options
+    DEBUG_PLANETS = config.debug["planets"]
+    DEBUG_FPS = config.debug["sim_fps"]
+    DEBUG_MOMENTUM = config.debug["momentum"]
+
+    cluster_active = config.cluster["active"]
+    dmaster: DistributedMaster = None
 
     # check for cluster use
     # and init if necessary
-    if cluster:
-
-        suc = connect_to_manager(config)
-        if suc:
-            log("[manager] connect to queue manager ok")
+    if cluster_active:
+        dmaster = DistributedMaster(config)
+        if dmaster.is_healthy():
+            log("DistributedMaster ok")
         else:
-            log("[manager] connect to queue manager FAILED")
+            log("DistributedMaster FAILED")
     else:
         # load specific update implementation
         try:
@@ -380,8 +258,8 @@ def startup(sim_pipe, sim_config: Config):
             message = sim_pipe.recv()
             if isinstance(message, str) and message == END_MESSAGE:
                 if message == END_MESSAGE:
-                    if cluster:
-                        # TODO perform cluster cleanup
+                    if cluster_active:
+                        dmaster.cleanup(planets)
                         pass
                     log('exiting ...')
                     break
@@ -415,11 +293,11 @@ def startup(sim_pipe, sim_config: Config):
 
             # perform step (in-memory)
             t_worker_start = time_ms()
-            if not cluster:
+            if cluster_active:
+                dmaster.calculate_planets(planets, new_planets, delta_t)
+            else:
                 worker.move_planets(planets.pos, planets.speeds, planets.accels, planets.masses, new_planets.pos,
                                     new_planets.speeds, new_planets.accels, planets.n, delta_t)
-            else:
-                calculate_manager(planets, new_planets, delta_t)
             t_worker = time_ms() - t_worker_start
 
             # convert to a renderable format and send to the receiver
@@ -461,7 +339,6 @@ def startup(sim_pipe, sim_config: Config):
                     log()
         else:
             time.sleep(0.05)
-
 
 
 def startup_profile(sim_pipe, sim_config: Config):

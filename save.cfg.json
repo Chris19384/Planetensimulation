@@ -3,21 +3,21 @@
     "profile_file": "/tmp/galaxy_profile.cprof",
     "load_planets_file": "planets.msgpack",
     "render_fps": 240,
-    "sim_fps": 60,
+    "sim_fps": 4,
     "fps_min": 1.0,
     "fps_max": 600.0,
     "delta_t": 27373870,
     "delta_t_min": 1000.0,
     "delta_t_max": 50000000.0,
     "mode_stuff": {
-        "mode": 0,
+        "mode": 1,
         "modes": [
             "last planet data",
             "random",
             "real"
         ]
     },
-    "update_impl": "cyworker",
+    "update_impl": "cyworker_parallel",
     "update_impl_fallback": "cyworker_np",
     "update_impls": [
         "cyworker",
@@ -50,11 +50,19 @@
         "host": "abacus.informatik.hs-augsburg.de",
         "port": 33333
     },
+    "debug": {
+        "cluster_times": false,
+        "cluster_result": false,
+        "momentum": true,
+        "planets": false,
+        "sim_fps": false,
+        "render_fps": false
+    },
     "print_every": 35.0,
     "central_mass": 0.0,
     "central_radius": 0.0,
     "universe_size": 0.0,
-    "nr_planets": 1207,
+    "nr_planets": 73,
     "mass_min": 5e+20,
     "mass_max": 5e+23,
     "radius_min": 58000000000.0,

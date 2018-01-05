@@ -52,4 +52,4 @@ clworker:
 cl: clmanager clworker
 
 clkill:
-	ps aux | grep 'python[3] distributed' | awk '{print $$2}' | xargs kill
+	ps aux | grep 'python3.6 distributed' | awk '{print $$2}' | xargs kill
