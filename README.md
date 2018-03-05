@@ -12,9 +12,7 @@ A semester project to learn about several technologies:
 ## Setup & Dependencies
 
 
-### Debian (not tested)
-
-Tested with Python 3.6.2
+### Debian (tested with Python 3.6.2)
 
 apt-get's Python3 version is too old
 
@@ -44,6 +42,22 @@ pacman -Sy gcc python python-numpy cython python-pyqt5
 ```
 
 
+### Windows (tested Windows 7?)
+
+```
+1. Download & install Python 3.6.x
+    add '<python_install_dir>' and '<python_install_dir>\Scripts' to your System Path Variable
+2. > pip3 install numpy cython pyqt5 pyopengl
+3. Download & install 'Make for Windows' from here: http://gnuwin32.sourceforge.net/packages/make.htm
+    add '<make_install_dir>\bin' to System Path
+4. Download & install MinGW from here: http://www.mingw.org 
+5.  from within MinGW Installation Manager, install
+    - mingw32-base
+    - mingw32-gcc
+    - mingw-developer-toolkit
+    - msys-base
+6. GIVE UP! :D
+```
 
 
 ## Build (native parts)
@@ -63,18 +77,12 @@ make
 
 ``` bash
 python3 simulation_gui.py
-
-# or
-
-make run
 ```
 
 
 
 
-
-
-#### Distributed System
+### Distributed System
 
 Roles:
 
@@ -95,12 +103,12 @@ Roles:
 
 
 
-##### Env for workers
+#### Worker Setup
 
-- ArchlinuxARM (Raspberry Pi)
+- ArchlinuxARM (tested with Raspberry Pi)
 
     ``` bash
-    # deps
+    # install dependencies
     sudo pacman -Sy git make gcc python python-numpy cython
 
     # compile cython code
@@ -123,7 +131,9 @@ Roles:
 
 
 
-##### Launch
+##### Run distributed system
+
+TODO document starting redis
 
 - Manager
 

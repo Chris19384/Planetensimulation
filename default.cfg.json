@@ -23,7 +23,8 @@
         "cyworker",
         "cyworker_np",
         "cyworker_optimized",
-        "cyworker_parallel"
+        "cyworker_parallel",
+        "worker_naive"
     ],
     "cluster": {
         "active": true,

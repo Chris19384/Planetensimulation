@@ -17,16 +17,17 @@
             "real"
         ]
     },
-    "update_impl": "cyworker_parallel",
+    "update_impl": "worker_naive",
     "update_impl_fallback": "cyworker_np",
     "update_impls": [
         "cyworker",
         "cyworker_np",
         "cyworker_optimized",
-        "cyworker_parallel"
+        "cyworker_parallel",
+        "worker_naive"
     ],
     "cluster": {
-        "active": true,
+        "active": false,
         "manager_host": "localhost",
         "manager_port": 33333,
         "manager_secret": "secret",
