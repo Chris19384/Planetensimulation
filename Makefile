@@ -53,3 +53,7 @@ cl: clmanager clworker
 
 clkill:
 	ps aux | grep 'python3.6 distributed' | awk '{print $$2}' | xargs kill
+
+
+nix: 
+	nix-shell
